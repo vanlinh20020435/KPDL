@@ -1,70 +1,44 @@
-# AutoLossGen
+### Self-Supervised Features Improve Open-World Learning
 
-This repository includes the implementation for paper "AutoLossGen: Automatic Loss Function Generation for Recommender Systems".
+This repo reproduces results from the paper "Self-Supervised Features Improve Open-World Learning"
 
-*Zelong Li, Jianchao Ji, Yingqiang Ge, Yongfeng Zhang. 2022. [AutoLossGen: Automatic Loss Function Generation for Recommender Systems](https://arxiv.org/abs/2204.13160). In the Proceedings of the 45th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR '22)*
-
-This package is mainly contributed by [Zelong Li](https://github.com/lzl65825) (zelong.li@rutgers.edu), [Yongfeng Zhang](https://github.com/evison) (yongfeng.zhang@rutgers.edu).
-We welcome any issues and requests for model implementation and bug fix.
-
-## Citation
-
-If you use the code, please cite our [paper](https://arxiv.org/abs/2204.13160):
-
+Please use the following BibTex to cite this work.
 ```
-@article{li2022autolossgen,
-  title={AutoLossGen: Automatic Loss Function Generation for Recommender Systems},
-  author={Li, Zelong and Ji, Jianchao and Ge, Yingqiang and Zhang, Yongfeng},
-  journal={SIGIR},
-  year={2022}
+article{dhamija2021self,
+  title={Self-Supervised Features Improve Open-World Learning},
+  author={Dhamija, Akshay Raj and Ahmad, Touqeer and Schwan, Jonathan and Jafarzadeh, Mohsen and Li, Chunchun and Boult, Terrance E},
+  journal={arXiv preprint arXiv:2102.07848},
+  year={2021}
 }
 ```
+###### Dependencies
+This repo is dependent on the repo https://github.com/Vastlab/vast that contains some useful functionality for various projects at VastLab.
+Please install it using `pip install git+https://github.com/Vastlab/vast.git`.
 
-## Environments
+###### Feature Extraction
+We pre-extract features from the self supervised networks and use them for all our experiments.
+For extracting the features please use either `FromCSV.py` or `FromDirectoryStructures.py` based on how your data is structured.
+The scripts are present at https://github.com/Vastlab/vast/tree/main/vast/scripts/FeatureExtractors.
 
-Python 3.9.7
-
-Necessary packages:
-
-```
-PyTorch==1.9.0
-Numpy==1.20.3
-scikit-learn==1.0.2
-scipy==1.7.3
-pandas==1.4.1
-tqdm==4.62.3
-```
-
-## Example to run the codes
-
-AutoLossGen has three phases. 
-
-![Image Loss](pics/Loss_Generation_Process_ver3.0.jpg)  
-
-An example to run the first phase: Loss Search
+###### Non-Backpropagating Incremental Learning (NIL)
+Sample command used to run incremental learning experiments using the NIL approach
 
 ```
-python main.py --epoch 10000 --child_num_branches 9 --child_num_layers 10 --search_loss --gpu 0 --sample_branch_id --sample_skip_id --controller_num_aggregate 10 --controller_train_steps 10 --log_file ../log/log_0.txt --formula_path ../model/Formula_0.txt --train_with_optim --dataset ml100k01-1-5 --model_name BiasedMF --random_seed 42
+time python NIL.py --training_feature_files {Feature_Path}/resnet50/imagenet_1000_train.hdf5 \
+ --validation_feature_files {Feature_Path}/resnet50/imagenet_1000_val.hdf5 \
+ --layer_names avgpool --OOD_Algo EVM --tailsize 1. --distance_metric euclidean \
+ --initialization_classes 50 --total_no_of_classes 100 --new_classes_per_batch 10 \ 
+ --output_dir /tmp/ --distance_multiplier 0.7 --no_of_exemplars 20
 ```
 
-Note: If the number of epochs is set too small, the performance may not good enough as the search is not throughout. 
-We recommend a large number of epochs, and you can stop it manually. 
-
-The second phase: Validation Check is run by 
+###### Non-backpropagting Open World Learning (NOWL)
+Sample command used to run open world learning experiments using the NOWL approach
 
 ```
-python loss_valid_check.py
+time python NOWL.py --training_feature_files {Feature_Path}/resnet50/imagenet_1000_train.hdf5 \
+ --validation_feature_files {Feature_Path}/resnet50/imagenet_1000_val.hdf5 \
+ --layer_names avgpool --OOD_Algo EVM --tailsize 1. --distance_metric euclidean \
+ --initialization_classes 50 --total_no_of_classes 100 --new_classes_per_batch 10 \
+ --output_dir /tmp/ --distance_multiplier 0.7 --no_of_exemplars 20 --cover_threshold 0.7 \
+ --known_sample_per_batch 2500 --unknown_sample_per_batch 2500 --initial_no_of_samples 15000
 ```
-
-The file path and decode method are currently hard coded in this python file.
-
-The last phase: Effectiveness Test. An example is:
-
-```
-python main.py --epoch 10000 --log_file ../log/log_1.txt --model_name BiasedMF --loss_func MaxR --metric AUC --dataset ml100k01-1-5 --smooth_coef 1e-6
-```
-
-## Reference
-
-- We leveraged the dataset of [NCR](https://github.com/rutgerswiselab/NCR) projects to implement our experiment.
-- We implemented our Controller part referring to [this project](https://github.com/TDeVries/enas_pytorch/), which is a PyTorch implementation of paper [Efficient Neural Architecture Search via Parameters Sharing](https://arxiv.org/abs/1802.03268).
